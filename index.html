@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.js"></script>
+    <script src="http://code.createjs.com/createjs-2013.12.12.min.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/1.11.3/TweenMax.min.js"></script>
+    <script>window.jQuery || document.write("<script src='js/libs/jquery-1.5.1.min.js'>\x3C/script>")</script>
+
+    <script>
+
+        var stage;
+        var queue;
+        var generalQueue;
+        var c;
+        var container, xiContainer;
+
+        var bannerObjects;
+        var xiObject;
+        var textObjects;
+
+        var bannerAnimations, textAnimations;
+
+        var sources = [{id:"b1", src:'Assets/b_1.png'},
+            {id:"b2", src:'Assets/b_2.png'},
+            {id:"b3", src:'Assets/b_3.png'},
+            {id:"b4", src:'Assets/b_4.png'},
+            {id:"b5", src:'Assets/b_5.png'},
+            {id:"b6", src:'Assets/b_6.png'},
+            {id:"b7", src:'Assets/b_7.png'},
+            {id:"b8", src:'Assets/b_8.png'},
+            {id:"b9", src:'Assets/b_9.png'},
+            {id:"b10", src:'Assets/b_10.png'}];
+
+        var textSource = {};
+        textSource["b1"] = " ";
+        textSource["b2"] = "2";
+        textSource["b3"] = "0";
+        textSource["b4"] = "1";
+        textSource["b5"] = "4";
+        textSource["b6"] = "0";
+        textSource["b7"] = "6";
+        textSource["b8"] = "0";
+        textSource["b9"] = "8";
+        textSource["b10"] = " ";
+
+
+        function init() {
+            c = document.getElementById("myCanvas");
+
+            $(window).resize( resizeCanvas );
+
+            stage = new createjs.Stage("myCanvas");
+            xiContainer = new createjs.Container();
+            container = new createjs.Container();
+            stage.addChild(xiContainer);
+            stage.addChild(container);
+
+            queue = new createjs.LoadQueue(false);
+            queue.addEventListener("complete", handleComplete);
+            queue.loadManifest(sources);
+            queue.loadManifest([{id:"Xi", src:"Assets/Xi_03.png"}]);
+
+            stage.enableMouseOver(20);
+
+            resizeCanvas();
+        }
+
+        function resizeCanvas(){
+            var targetWidth = window.innerWidth;
+            if (targetWidth < 1024) targetWidth = 1024;
+            if (targetWidth > 1920) targetWidth = 1920;
+
+            var ratio = targetWidth/1920;
+
+            container.scaleX = ratio;
+            container.scaleY = ratio;
+
+            stage.update();
+        }
+
+        function handleComplete(event) {
+
+            createjs.Ticker.addEventListener("tick", tick);
+
+            xiObject = addXi(container);
+
+            bannerObjects = addBanners(container);
+
+            dropBannersIn(bannerObjects);
+        }
+
+        function addXi(container) {
+            var xi = new createjs.Bitmap(queue.getResult("Xi"));
+            xi.scaleX = (0.618 * c.height) / xi.image.height;
+            xi.scaleY = xi.scaleX;
+            xi.x = (c.width - 0.618 * c.height)/2.;
+            xi.y = (c.height - 0.618 * c.height)/2.;
+            xi.alpha = 0.0;
+
+            xi.addEventListener("click", function(event) {
+                TweenLite.to(xi, 1.0, {alpha:0.1, ease:Elastic.easeIn});
+                TweenLite.to(xi, 1.0, {alpha:0.3, delay:1.0, ease:Ease.easeIn});
+            });
+
+            xiContainer.addChild(xi);
+
+            return xi;
+        }
+
+        function addBanners(container) {
+            var bannerWidth = c.width / 20.;
+            var initial = c.width / 40.
+            var results = {};
+
+            for (var i = 1; i <= 10; i++) {
+                var key = "b"+i;
+                var banner = new createjs.Bitmap(queue.getResult(key));
+                banner.x = initial;
+                banner.scaleX = bannerWidth / banner.image.width;
+                banner.scaleY = banner.scaleX;
+                banner.y = -1080;//(c.height - banner.image.height * banner.scaleY) / 2.;
+                banner["userInfo"] = key;
+
+                banner.addEventListener("mouseover", function(event) {
+                    if (textAnimations == 0) {
+                        var target = event.target
+                        var targetY = ((c.height - target.image.height * target.scaleY) / 2);
+                        if (container.y == 0) {
+                            targetY -= 100;
+                        }
+                        else {
+                            targetY += 50;
+                        }
+
+                        TweenLite.to(target, 0.5, {y:targetY, ease:Ease.easeIn});
+
+                        var key = target["userInfo"];
+                        var textObject = textObjects[key];
+
+                        TweenLite.to(textObject, 0.5, {alpha:0, ease:Ease.easeIn});
+                    }
+                });
+
+                banner.addEventListener("mouseout", function(event) {
+                    if (textAnimations == 0) {
+                        var target = event.target;
+                        TweenLite.to(target, 0.5, {y:((c.height - target.image.height * target.scaleY) / 2), ease:Ease.easeIn});
+
+                        var key = target["userInfo"];
+                        var textObject = textObjects[key];
+
+                        TweenLite.to(textObject, 0.5, {alpha:1, ease:Ease.easeIn});
+                    }
+                });
+
+                banner.addEventListener("click", function(event) {
+                    if (textAnimations == 0) {
+                        var target = event.target;
+                        TweenLite.to(target, 0.5, {y:((c.height - target.image.height * target.scaleY) / 2), ease:Ease.easeIn});
+                        var key = target["userInfo"];
+                        var textObject = textObjects[key];
+                        TweenLite.to(textObject, 0.5, {alpha:1, ease:Ease.easeIn});
+
+                        if(container.y == 0) {
+                            TweenLite.to(container, 0.5, {y:-(container.getBounds().height) * 0.8, ease:Ease.easeInOut});
+                        }
+                        else {
+                            if (target["userInfo"] == "b10")
+                                TweenLite.to(container, 0.5, {y:0, ease:Ease.easeInOut});
+                            else {
+                                console.log(target["userInfo"]);
+                            }
+                        }
+                    }
+                });
+
+                container.addChild(banner);
+
+                initial += 2 * bannerWidth;
+
+                results[key] = banner;
+            }
+
+            return results;
+        }
+
+        function addTexts(container, banners, textSource) {
+            var results = {};
+
+            for (var key in banners) {
+                var banner = banners[key];
+
+                var text = textSource[key];
+                if (text != null) {
+                    var text = new createjs.Text(textSource[key], "60px Myriad Pro", "#FFFFFF");
+                    var textBounds = text.getBounds();
+                    text.x = banner.x + (banner.image.width - textBounds.width) / 2.;
+                    text.y = banner.y + banner.image.height * 0.9;
+                    text.alpha = 0;
+                    container.addChild(text);
+                    results[key] = text;
+                }
+
+                if (key == "b8") {
+                    var text = new createjs.Text("Save the Date", "50px Myriad Pro", "#FFFFFF");
+
+                    text.x = banner.x + (banner.image.width - textBounds.width) / 2.;
+                    text.y = banner.y + banner.image.height * 0.15;
+                    text.alpha = 0;
+                    text.regX = 50; text.regY = 40;
+                    text.rotation = 90;
+
+                    container.addChild(text);
+
+                    results["std"] = text;
+                }
+            }
+
+            return results;
+        }
+
+        function fadeTextIn(texts) {
+            textAnimations = Object.keys(texts).length
+            for (var key in texts) {
+                var text = texts[key];
+
+                TweenLite.to(text, 1, {alpha:1, onComplete:textFadedIn});
+            }
+        }
+
+        function fadeXiIn(xi) {
+            TweenLite.to(xi, 2, {alpha:0.3});
+        }
+
+        function dropBannersIn(banners) {
+            var bannersArray = [];
+            for (var key in banners) {
+                var banner = banners[key];
+                bannersArray.push(banner);
+            }
+
+            bannerAnimations = bannersArray.length;
+            TweenMax.staggerTo(shuffle(bannersArray), 0.5,
+                    {y:(c.height - banner.image.height * banner.scaleY) / 2., ease:Ease.easeInOut, onComplete:bannerDroppedIn}, 0.1);
+        }
+
+        function bannerDroppedIn() {
+            bannerAnimations --;
+            if (bannerAnimations == 0) {
+                textObjects = addTexts(container, bannerObjects, textSource);
+                fadeTextIn(textObjects);
+            }
+        }
+
+        function textFadedIn() {
+            textAnimations --;
+            if (textAnimations == 0) {
+                fadeXiIn(xiObject);
+            }
+        }
+
+        function tick(event) {
+            stage.update();
+        }
+
+        function shuffle(o){ //v1.0
+            for(var j, x, i = o.length; i; j = Math.floor(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x);
+            return o;
+        };
+
+    </script>
+</head>
+
+
+<body onload="init()">
+<canvas id="myCanvas" width="1920" height="1080">
+
+</canvas>
+</body>
+</html>
